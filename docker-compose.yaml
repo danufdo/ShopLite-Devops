@@ -1,0 +1,47 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shoplite-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shoplite
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build:
+      context: ../shoplite.api
+      dockerfile: ../shoplite-devops/dotnet/Dockerfile
+    container_name: shoplite.api
+    restart: always
+    environment:
+      - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=shoplite;user=root;password=root;
+    depends_on:
+      - mysql
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ../shopify-lite-devops
+      dockerfile: ../shoplite-devops/nextjs/Dockerfile
+    container_name: shopify-lite-devops
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:latest
+    container_name: shoplite-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
